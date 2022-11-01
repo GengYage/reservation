@@ -105,6 +105,6 @@ mod test {
         // should be error
         let error = manager.reserve(rsvp_sec).await.unwrap_err();
 
-        if let abi::error::Error::ConflictError(_) = error {}
+        if let Error::ConflictError(_) = error {}
     }
 }

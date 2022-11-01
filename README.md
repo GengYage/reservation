@@ -1,5 +1,15 @@
 ## 预定系统
 
+## run the test
+
+```shell
+cargo install cargo-nextest
+
+cargo nextest run
+
+cargo nextest run --nocapture
+```
+
 ### database
 
 ```postgresql
@@ -25,7 +35,10 @@ create index reservations_resource_id_idx on rsvp.reservations (resource_id);
 create index reservations_user_id_idx on rsvp.reservations (user_id);
 
 create or replace function rsvp.query(uid text, rid text, during tstzrange)
-    returns table("like" rsvp.reservations)
+    returns table
+            (
+                "like" rsvp.reservations
+            )
 as
 $$
 BEGIN
