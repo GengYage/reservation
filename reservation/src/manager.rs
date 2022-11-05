@@ -3,8 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use sqlx::postgres::types::PgRange;
 use sqlx::types::Uuid;
-use abi::{Reservation, ReservationQuery, ReservationStatus};
-use abi::error::Error;
+use abi::{Error, Reservation, ReservationQuery, ReservationStatus};
 
 use crate::{ReservationId, ReservationManager, Rsvp};
 
@@ -66,6 +65,7 @@ impl ReservationManager {
 #[cfg(test)]
 mod test {
     use chrono::FixedOffset;
+    use abi::ReservationConflictInfo;
     use super::*;
 
     #[sqlx_database_tester::test(
@@ -105,6 +105,12 @@ mod test {
         // should be error
         let error = manager.reserve(rsvp_sec).await.unwrap_err();
 
-        if let Error::ConflictError(_) = error {}
+        if let Error::ConflictError(ReservationConflictInfo::Parsed(info)) = error {
+            assert_eq!(info.old.rid, "ocean-view-room-714");
+            assert_eq!(info.old.start.to_rfc3339(), "2022-12-25T22:00:00+00:00");
+            assert_eq!(info.old.end.to_rfc3339(), "2022-12-28T19:00:00+00:00");
+        } else {
+            panic!("should be panic")
+        }
     }
 }

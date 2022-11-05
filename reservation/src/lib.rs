@@ -2,7 +2,7 @@ mod manager;
 
 use async_trait::async_trait;
 use sqlx::PgPool;
-use abi::error::Error;
+use abi::Error;
 
 pub type ReservationId = String;
 pub type UserId = String;

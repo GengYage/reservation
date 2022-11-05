@@ -1,6 +1,8 @@
 pub use pb::*;
 
+mod error;
 mod pb;
-pub mod error;
 mod types;
 mod utils;
+
+pub use error::{Error, ReservationConflictInfo};
