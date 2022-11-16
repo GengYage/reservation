@@ -9,14 +9,25 @@ pub use crate::error::conflict::ReservationConflictInfo;
 pub enum Error {
     #[error("sql error")]
     SqlError(sqlx::Error),
+
     #[error("Conflict Reservation")]
     ConflictError(ReservationConflictInfo),
+
     #[error("invalid start or end time of the reservation")]
     InvalidTime,
+
     #[error("invalid user id: {0}")]
     InvalidUserId(String),
+
     #[error("invalid resource id: {0}")]
     InvalidResourceId(String),
+
+    #[error("invalid reservation id: {0}")]
+    InvalidReservationId(String),
+
+    #[error("No reservation found by the given condition")]
+    NotFound,
+
     #[error("unknown error")]
     Unknown,
 }
@@ -37,6 +48,7 @@ impl From<sqlx::Error> for Error {
                     _ => Error::SqlError(sqlx::Error::Database(err_dyn))
                 }
             }
+            sqlx::Error::RowNotFound => Error::NotFound,
             _ => Error::SqlError(err),
         }
     }

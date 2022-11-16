@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Row};
 use sqlx::postgres::types::PgRange;
 use sqlx::types::Uuid;
+
 use abi::{Error, Reservation, ReservationQuery, ReservationStatus};
 
 use crate::{ReservationId, ReservationManager, Rsvp};
@@ -35,8 +36,19 @@ impl Rsvp for ReservationManager {
         Ok(rsvp)
     }
 
-    async fn change_status(&self, _id: ReservationId) -> Result<Reservation, Error> {
-        todo!()
+    async fn change_status(&self, id: ReservationId) -> Result<Reservation, Error> {
+        let id = Uuid::parse_str(&id)
+            .map_err(|_| abi::Error::InvalidResourceId(id))?;
+
+        let rsvp: Reservation = sqlx::query_as(r#"UPDATe rsvp.reservations
+        SET status = 'confirmed'
+        where id = $1
+        AND status = 'pending' RETURNING *"#)
+            .bind(id)
+            .fetch_one(&self.pool)
+            .await?;
+
+        Ok(rsvp)
     }
 
     async fn update_note(&self, _id: ReservationId, _note: String) -> Result<Reservation, Error> {
@@ -112,5 +124,40 @@ mod test {
         } else {
             panic!("should be panic")
         }
+    }
+
+    #[sqlx_database_tester::test(
+    pool(variable = "migrated_pool", migrations = "../migrations")
+    )]
+    async fn reserve_change_status_should_work() {
+        let manager = ReservationManager::new(migrated_pool.clone());
+        let rsvp = Reservation::new_pending("Geng",
+                                                  "ocean-view-room-714",
+                                                  "2022-12-25T15:00:00-0700".parse().unwrap(),
+                                                  "2022-12-28T12:00:00-0700".parse().unwrap(),
+                                                  "ok");
+        let rsvp = manager.reserve(rsvp).await.unwrap();
+
+        let rsvp = manager.change_status(rsvp.id).await.unwrap();
+
+        assert_eq!(rsvp.status, ReservationStatus::Confirmed as i32)
+    }
+
+    #[sqlx_database_tester::test(
+    pool(variable = "migrated_pool", migrations = "../migrations")
+    )]
+    async fn reserve_change_status_not_pending_should_do_nothing() {
+        let manager = ReservationManager::new(migrated_pool.clone());
+        let rsvp = Reservation::new_pending("Geng",
+                                            "ocean-view-room-714",
+                                            "2022-12-25T15:00:00-0700".parse().unwrap(),
+                                            "2022-12-28T12:00:00-0700".parse().unwrap(),
+                                            "ok");
+        let rsvp = manager.reserve(rsvp).await.unwrap();
+
+        let rsvp = manager.change_status(rsvp.id).await.unwrap();
+
+        let ret = manager.change_status(rsvp.id).await.unwrap_err();
+        println!("{:?}", ret);
     }
 }
